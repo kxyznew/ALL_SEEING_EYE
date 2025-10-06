@@ -1,5 +1,6 @@
 from typing import List, Dict
 import os
+from .prompts import load_parahelp_prompts
 
 def simple_extractive_summary(lines: List[str], max_points: int = 7) -> List[str]:
     # naive: pick distinct longest lines as key points
@@ -15,19 +16,22 @@ def simple_extractive_summary(lines: List[str], max_points: int = 7) -> List[str
             break
     return uniq
 
-def _try_llm_key_points(text: str, max_points: int = 7) -> List[str]:
+def _try_llm_key_points(text: str, max_points: int = 7, system_prompt: str | None = None, user_prefix: str | None = None) -> List[str]:
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
         return []
     try:
         from openai import OpenAI
         client = OpenAI()
+        messages = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        else:
+            messages.append({"role": "system", "content": "Extract the 5-7 most important points as concise bullets."})
+        user_content = (user_prefix or "") + "\n" + text[:8000]
         completion = client.chat.completions.create(
             model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": "Extract the 5-7 most important points as concise bullets."},
-                {"role": "user", "content": text[:8000]},
-            ],
+            messages=messages + [{"role": "user", "content": user_content}],
             temperature=0.2,
         )
         content = completion.choices[0].message.content or ""
@@ -49,9 +53,15 @@ def _try_llm_key_points(text: str, max_points: int = 7) -> List[str]:
     except Exception:
         return []
 
-def generate_key_points(lines: List[str], max_points: int = 7) -> List[str]:
+def generate_key_points(lines: List[str], max_points: int = 7, use_parahelp: bool = False) -> List[str]:
     long_text = " ".join(lines)
-    llm_points = _try_llm_key_points(long_text, max_points=max_points)
+    system = None
+    prefix = None
+    if use_parahelp:
+        prompts = load_parahelp_prompts()
+        system = prompts.get("summarize", {}).get("system")
+        prefix = prompts.get("summarize", {}).get("user_prefix")
+    llm_points = _try_llm_key_points(long_text, max_points=max_points, system_prompt=system, user_prefix=prefix)
     if llm_points:
         return llm_points
     return simple_extractive_summary(lines, max_points=max_points)
@@ -64,6 +74,43 @@ def explain_like_child(key_points: List[str]) -> str:
         parts.append(f"- {kp}")
     return ("Here are the big ideas in simple words.\n" + "\n".join(parts) +
             "\nImagine you are telling a story to a friend. These are the steps.")
+
+def _try_llm_explain(key_points: List[str], system_prompt: str | None = None, user_prefix: str | None = None) -> str | None:
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        return None
+    try:
+        from openai import OpenAI
+        client = OpenAI()
+        bullets = "\n".join(f"- {kp}" for kp in key_points)
+        messages = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        else:
+            messages.append({"role": "system", "content": "Explain these points to a 7-year-old using simple, friendly language and short bullet points."})
+        user_content = f"{user_prefix or 'Key points:'}\n{bullets}"
+        completion = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=messages + [{"role": "user", "content": user_content}],
+            temperature=0.3,
+        )
+        return completion.choices[0].message.content or None
+    except Exception:
+        return None
+
+def generate_explanation(key_points: List[str], use_parahelp: bool = False) -> str:
+    if not key_points:
+        return ""
+    system = None
+    prefix = None
+    if use_parahelp:
+        prompts = load_parahelp_prompts()
+        system = prompts.get("explain", {}).get("system")
+        prefix = prompts.get("explain", {}).get("user_prefix")
+    llm = _try_llm_explain(key_points, system_prompt=system, user_prefix=prefix)
+    if llm:
+        return llm
+    return explain_like_child(key_points)
 
 def build_quiz_question(key_points: List[str]) -> str:
     if not key_points:

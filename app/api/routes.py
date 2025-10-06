@@ -5,7 +5,7 @@ from pathlib import Path
 from datetime import datetime
 from app.services.transcript import fetch_transcript
 from app.services.youtube import validate_youtube_url
-from app.services.summarize import generate_key_points, explain_like_child
+from app.services.summarize import generate_key_points, generate_explanation
 import logging
 
 router = APIRouter()
@@ -15,6 +15,7 @@ class AnalyzeRequest(BaseModel):
     url: HttpUrl
     simplify_for_child: bool = True
     language: Optional[str] = "en"
+    use_parahelp: bool = False
 
 @router.post("/analyze")
 async def analyze_video(req: AnalyzeRequest):
@@ -30,11 +31,11 @@ async def analyze_video(req: AnalyzeRequest):
         logger.exception("Transcript fetch failed")
         raise HTTPException(status_code=500, detail="Failed to fetch transcript")
 
-    key_points: List[str] = generate_key_points(lines)
+    key_points: List[str] = generate_key_points(lines, use_parahelp=req.use_parahelp)
     excerpt_text = " ".join(lines[:30]).strip()
     if len(excerpt_text) > 1200:
         excerpt_text = excerpt_text[:1200] + "..."
-    child_text = explain_like_child(key_points) if req.simplify_for_child else ""
+    child_text = generate_explanation(key_points, use_parahelp=req.use_parahelp) if req.simplify_for_child else ""
 
     notes_parts: List[str] = []
     if title:

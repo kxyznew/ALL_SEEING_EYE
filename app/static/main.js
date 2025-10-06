@@ -40,6 +40,7 @@ function speakAqua(text) {
 async function analyze() {
   const url = document.getElementById('url').value.trim();
   const child = document.getElementById('child').checked;
+  const use_parahelp = document.getElementById('parahelp').checked;
   const status = document.getElementById('status');
   status.textContent = 'Analyzing…';
   status.classList.remove('hidden');
@@ -47,7 +48,7 @@ async function analyze() {
     const res = await fetch('/api/analyze', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url, simplify_for_child: child })
+      body: JSON.stringify({ url, simplify_for_child: child, use_parahelp })
     });
     if (!res.ok) throw new Error('Request failed');
     const data = await res.json();
