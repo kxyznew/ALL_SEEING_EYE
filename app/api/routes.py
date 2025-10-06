@@ -6,8 +6,10 @@ from datetime import datetime
 from app.services.transcript import fetch_transcript
 from app.services.youtube import validate_youtube_url
 from app.services.summarize import generate_key_points, explain_like_child
+import logging
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 class AnalyzeRequest(BaseModel):
     url: HttpUrl
@@ -22,8 +24,10 @@ async def analyze_video(req: AnalyzeRequest):
     try:
         title, lines = await fetch_transcript(url_str, languages=[req.language] if req.language else None)
     except ValueError as e:
+        logger.warning("Bad request for transcript: %s", e)
         raise HTTPException(status_code=400, detail=str(e))
     except Exception:
+        logger.exception("Transcript fetch failed")
         raise HTTPException(status_code=500, detail="Failed to fetch transcript")
 
     key_points: List[str] = generate_key_points(lines)
@@ -52,7 +56,9 @@ async def analyze_video(req: AnalyzeRequest):
     try:
         file_path.write_text(content, encoding="utf-8")
         saved_path = str(file_path)
+        logger.info("Saved notes to %s", saved_path)
     except Exception:
+        logger.exception("Failed to save notes")
         saved_path = None
 
     return {

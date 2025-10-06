@@ -111,6 +111,13 @@ async function analyze() {
     };
   } catch (e) {
     status.textContent = 'Error: ' + (e.message || e);
+    try {
+      fetch('/api/client-log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ level: 'error', message: 'analyze failed', stack: e?.stack || String(e) })
+      });
+    } catch (_) {}
   }
 }
 
