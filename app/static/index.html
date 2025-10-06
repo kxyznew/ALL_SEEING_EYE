@@ -1,0 +1,43 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>YouTube Key Points Summarizer</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <div class="container">
+      <h1>YouTube Key Points Summarizer</h1>
+      <div class="input-row">
+        <input id="url" type="url" placeholder="Paste YouTube link here" />
+        <button id="analyze">Analyze</button>
+      </div>
+      <label><input id="child" type="checkbox" checked /> Simplify for a child</label>
+      <div id="status"></div>
+      <div id="results" class="hidden">
+        <h2 id="title"></h2>
+        <h3>Key Points</h3>
+        <ul id="keypoints"></ul>
+        <h3>Explain Like I'm 7</h3>
+        <div id="child_explanation" class="card"></div>
+        <h3>Transcript Excerpt</h3>
+        <pre id="excerpt"></pre>
+        <div class="actions">
+          <button id="download">Download Notes</button>
+          <button id="quiz">Quiz Me</button>
+        </div>
+        <div id="qa" class="hidden">
+          <h3>Quick Check</h3>
+          <div id="question" class="card"></div>
+          <div class="input-row">
+            <input id="answer" placeholder="Your answer" />
+            <button id="submit_answer">Submit</button>
+          </div>
+          <div id="feedback"></div>
+        </div>
+      </div>
+    </div>
+    <script src="/static/main.js"></script>
+  </body>
+</html>
